@@ -1,0 +1,41 @@
+name: Vaadin Java E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out recursively
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+          submodules: recursive
+      - name: Set up Java 21 and Maven cache
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Set up Node 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - name: Verify immutable OptoSync pins
+        run: |
+          test "$(git -C vendor/opto-sync-clients rev-parse HEAD)" = "$(jq -r .clients opto-sync-pin.json)"
+          test "$(git -C vendor/opto-sync-clients/syncer.c rev-parse HEAD)" = "$(jq -r .core opto-sync-pin.json)"
+      - name: Test Vaadin and virtual-thread background replay
+        run: |
+          mvn -B -ntp test package
+          node --check frontend/opto-sync-register.js
+          node --check src/main/resources/META-INF/resources/opto-sync-sw.js
+          test -f target/vaadin-java-e2e-0.1.0.jar
