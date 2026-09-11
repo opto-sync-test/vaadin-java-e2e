@@ -2,3 +2,7 @@ target/
 node_modules/
 .vaadin/
 .DS_Store
+
+# Local temporary directories and repository-owned worktrees
+tmp/
+temp/
